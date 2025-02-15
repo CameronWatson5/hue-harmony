@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { saveFont, getUserFont } from '../utils/firestoreUtils';
+import { saveFont, getUserFonts, deleteFont } from '../utils/firestoreUtils';
 import { auth } from '../firebase';
 
 const GOOGLE_FONTS_API = 'https://www.googleapis.com/webfonts/v1/webfonts';
@@ -9,7 +9,9 @@ const API_KEY = process.env.REACT_APP_GOOGLE_FONTS_API_KEY;
 const FontPicker = () => {
   const [fonts, setFonts] = useState([]);
   const [selectedFont, setSelectedFont] = useState('');
+  const [savedFonts, setSavedFonts] = useState([]);
   const [notification, setNotification] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -19,21 +21,26 @@ const FontPicker = () => {
         );
         const data = await response.json();
         setFonts(data.items.slice(0, 50)); // Get top 50 popular fonts
-
-        // Load saved font if user is logged in
-        if (auth.currentUser) {
-          const savedFont = await getUserFont(auth.currentUser.uid);
-          if (savedFont) {
-            handleFontChange(savedFont);
-          }
-        }
       } catch (error) {
         console.error('Error loading fonts:', error);
         showNotification('Error loading fonts', 'error');
       }
     };
 
+    const loadSavedFonts = async () => {
+      if (auth.currentUser) {
+        try {
+          const fonts = await getUserFonts(auth.currentUser.uid);
+          setSavedFonts(fonts);
+        } catch (error) {
+          showNotification('Error loading saved fonts', 'error');
+        }
+      }
+      setLoading(false);
+    };
+
     loadFonts();
+    loadSavedFonts();
   }, [auth.currentUser]);
 
   const loadFontToDocument = (fontFamily) => {
@@ -68,11 +75,27 @@ const FontPicker = () => {
       return;
     }
 
+    if (savedFonts.length >= 5) {
+      showNotification('Maximum number of fonts (5) reached', 'error');
+      return;
+    }
+
     try {
-      await saveFont(auth.currentUser.uid, selectedFont);
+      const id = await saveFont(auth.currentUser.uid, selectedFont);
+      setSavedFonts([...savedFonts, { id, fontFamily: selectedFont, createdAt: new Date().toISOString() }]);
       showNotification('Font saved successfully!', 'success');
     } catch (error) {
       showNotification('Error saving font', 'error');
+    }
+  };
+
+  const handleDeleteFont = async (fontId) => {
+    try {
+      await deleteFont(auth.currentUser.uid, fontId);
+      setSavedFonts(savedFonts.filter(f => f.id !== fontId));
+      showNotification('Font deleted successfully!', 'success');
+    } catch (error) {
+      showNotification('Error deleting font', 'error');
     }
   };
 
@@ -104,7 +127,7 @@ const FontPicker = () => {
               </Button>
               <Button 
                 onClick={handleSaveFont} 
-                disabled={!auth.currentUser || !selectedFont}
+                disabled={!auth.currentUser || !selectedFont || savedFonts.length >= 5}
               >
                 Save Font
               </Button>
@@ -127,6 +150,29 @@ const FontPicker = () => {
                 Bold Italic - The quick brown fox jumps over the lazy dog
               </Preview>
             </PreviewContainer>
+          )}
+
+          {auth.currentUser && (
+            <SavedFontsSection>
+              <h3>Saved Fonts ({savedFonts.length}/5)</h3>
+              <SavedFontsGrid>
+                {savedFonts.map((font) => (
+                  <SavedFontCard key={font.id}>
+                    <SavedFontPreview style={{ fontFamily: font.fontFamily }}>
+                      {font.fontFamily}
+                    </SavedFontPreview>
+                    <SavedFontActions>
+                      <ActionButton onClick={() => handleFontChange(font.fontFamily)}>
+                        Load
+                      </ActionButton>
+                      <ActionButton onClick={() => handleDeleteFont(font.id)}>
+                        Delete
+                      </ActionButton>
+                    </SavedFontActions>
+                  </SavedFontCard>
+                ))}
+              </SavedFontsGrid>
+            </SavedFontsSection>
           )}
         </FontGroup>
       </FontSection>
@@ -236,6 +282,69 @@ const Preview = styled('div')`
   border: 1px solid #eee;
   border-radius: 4px;
   font-size: 1.1rem;
+`;
+
+const SavedFontsSection = styled('div')`
+  margin-top: 2rem;
+  
+  h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+  }
+`;
+
+const SavedFontsGrid = styled('div')`
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+`;
+
+const SavedFontCard = styled('div')`
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const SavedFontPreview = styled('div')`
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+`;
+
+const SavedFontActions = styled('div')`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const ActionButton = styled('button')`
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.9rem;
+
+  &:first-child {
+    background-color: #4a90e2;
+    color: white;
+
+    &:hover {
+      background-color: #357abd;
+    }
+  }
+
+  &:last-child {
+    background-color: #ff4444;
+    color: white;
+
+    &:hover {
+      background-color: #cc0000;
+    }
+  }
 `;
 
 const NotificationBar = styled('div')`

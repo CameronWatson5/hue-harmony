@@ -51,30 +51,49 @@ export const deletePalette = async (userId, paletteId) => {
 
 export const saveFont = async (userId, font) => {
   try {
-    // We'll store only one font per user, so we'll use a fixed document ID
-    const userFontRef = doc(db, 'users', userId, 'preferences', 'font');
-    await setDoc(userFontRef, {
+    const userFontsRef = collection(db, 'users', userId, 'fonts');
+    const q = query(userFontsRef);
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.size >= 5) {
+      throw new Error('Maximum number of fonts (5) reached');
+    }
+
+    const newFontRef = doc(userFontsRef);
+    await setDoc(newFontRef, {
       fontFamily: font,
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     });
-    return 'font';
+    return newFontRef.id;
   } catch (error) {
     console.error('Error saving font:', error);
     throw error;
   }
 };
 
-export const getUserFont = async (userId) => {
+export const getUserFonts = async (userId) => {
   try {
-    const userFontRef = doc(db, 'users', userId, 'preferences', 'font');
-    const fontDoc = await getDoc(userFontRef); // getDoc instead of getDocs
+    const userFontsRef = collection(db, 'users', userId, 'fonts');
+    const q = query(userFontsRef, limit(5));
+    const querySnapshot = await getDocs(q);
     
-    if (fontDoc.exists()) {
-      return fontDoc.data().fontFamily;
-    }
-    return null;
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      fontFamily: doc.data().fontFamily,
+      createdAt: doc.data().createdAt
+    }));
   } catch (error) {
-    console.error('Error getting font:', error);
+    console.error('Error getting fonts:', error);
+    throw error;
+  }
+};
+
+export const deleteFont = async (userId, fontId) => {
+  try {
+    const fontRef = doc(db, 'users', userId, 'fonts', fontId);
+    await deleteDoc(fontRef);
+  } catch (error) {
+    console.error('Error deleting font:', error);
     throw error;
   }
 };
