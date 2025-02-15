@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, deleteDoc, query, where, limit } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, deleteDoc, query, where, limit, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const savePalette = async (userId, palette) => {
@@ -45,6 +45,36 @@ export const deletePalette = async (userId, paletteId) => {
     await deleteDoc(paletteRef);
   } catch (error) {
     console.error('Error deleting palette:', error);
+    throw error;
+  }
+};
+
+export const saveFont = async (userId, font) => {
+  try {
+    // We'll store only one font per user, so we'll use a fixed document ID
+    const userFontRef = doc(db, 'users', userId, 'preferences', 'font');
+    await setDoc(userFontRef, {
+      fontFamily: font,
+      updatedAt: new Date().toISOString(),
+    });
+    return 'font';
+  } catch (error) {
+    console.error('Error saving font:', error);
+    throw error;
+  }
+};
+
+export const getUserFont = async (userId) => {
+  try {
+    const userFontRef = doc(db, 'users', userId, 'preferences', 'font');
+    const fontDoc = await getDoc(userFontRef); // getDoc instead of getDocs
+    
+    if (fontDoc.exists()) {
+      return fontDoc.data().fontFamily;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting font:', error);
     throw error;
   }
 };
