@@ -6,8 +6,8 @@ const API_KEY = process.env.REACT_APP_GOOGLE_FONTS_API_KEY;
 
 const FontPicker = () => {
   const [fonts, setFonts] = useState([]);
-  const [selectedHeadingFont, setSelectedHeadingFont] = useState('');
-  const [selectedBodyFont, setSelectedBodyFont] = useState('');
+  const [selectedFont, setSelectedFont] = useState('');
+  const [fontVariants, setFontVariants] = useState([]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -30,19 +30,20 @@ const FontPicker = () => {
     link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(
       ' ',
       '+'
-    )}&display=swap`;
+    )}:ital,wght@0,400;0,700;1,400;1,700&display=swap`;
     link.rel = 'stylesheet';
     document.head.appendChild(link);
   };
 
-  const handleHeadingFontChange = (font) => {
-    setSelectedHeadingFont(font);
-    loadFontToDocument(font);
-  };
-
-  const handleBodyFontChange = (font) => {
-    setSelectedBodyFont(font);
-    loadFontToDocument(font);
+  const handleFontChange = (fontFamily) => {
+    setSelectedFont(fontFamily);
+    loadFontToDocument(fontFamily);
+    
+    // Find the selected font's variants
+    const selectedFontData = fonts.find(font => font.family === fontFamily);
+    if (selectedFontData) {
+      setFontVariants(selectedFontData.variants);
+    }
   };
 
   return (
@@ -52,39 +53,41 @@ const FontPicker = () => {
       </Header>
       <FontSection>
         <FontGroup>
-          <Label>Heading Font</Label>
+          <Label>Select Font</Label>
           <Select
-            value={selectedHeadingFont}
-            onChange={(e) => handleHeadingFontChange(e.target.value)}
+            value={selectedFont}
+            onChange={(e) => handleFontChange(e.target.value)}
           >
-            <option value="">Select a heading font</option>
+            <option value="">Select a font</option>
             {fonts.map((font) => (
               <option key={font.family} value={font.family}>
                 {font.family}
               </option>
             ))}
           </Select>
-          <Preview style={{ fontFamily: selectedHeadingFont }}>
-            The quick brown fox jumps over the lazy dog
-          </Preview>
-        </FontGroup>
 
-        <FontGroup>
-          <Label>Body Font</Label>
-          <Select
-            value={selectedBodyFont}
-            onChange={(e) => handleBodyFontChange(e.target.value)}
-          >
-            <option value="">Select a body font</option>
-            {fonts.map((font) => (
-              <option key={font.family} value={font.family}>
-                {font.family}
-              </option>
-            ))}
-          </Select>
-          <Preview style={{ fontFamily: selectedBodyFont }}>
-            The quick brown fox jumps over the lazy dog
-          </Preview>
+          {selectedFont && (
+            <PreviewContainer>
+              <PreviewTitle>Font Styles Preview</PreviewTitle>
+              <Preview style={{ fontFamily: selectedFont, fontWeight: 400 }}>
+                Regular - The quick brown fox jumps over the lazy dog
+              </Preview>
+              <Preview style={{ fontFamily: selectedFont, fontWeight: 700 }}>
+                Bold - The quick brown fox jumps over the lazy dog
+              </Preview>
+              <Preview style={{ fontFamily: selectedFont, fontWeight: 400, fontStyle: 'italic' }}>
+                Italic - The quick brown fox jumps over the lazy dog
+              </Preview>
+              <Preview style={{ fontFamily: selectedFont, fontWeight: 700, fontStyle: 'italic' }}>
+                Bold Italic - The quick brown fox jumps over the lazy dog
+              </Preview>
+              
+              <VariantsInfo>
+                <h4>Available Variants:</h4>
+                <p>{fontVariants?.join(', ') || 'Loading variants...'}</p>
+              </VariantsInfo>
+            </PreviewContainer>
+          )}
         </FontGroup>
       </FontSection>
     </Container>
@@ -132,14 +135,42 @@ const Select = styled('select')`
   max-width: 400px;
 `;
 
+const PreviewContainer = styled('div')`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+`;
+
+const PreviewTitle = styled('h3')`
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+`;
+
 const Preview = styled('div')`
   padding: 1rem;
   border: 1px solid #eee;
   border-radius: 4px;
-  font-size: 1.25rem;
-  min-height: 100px;
-  display: flex;
-  align-items: center;
+  font-size: 1.1rem;
+`;
+
+const VariantsInfo = styled('div')`
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+  }
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+  }
 `;
 
 export default FontPicker;
