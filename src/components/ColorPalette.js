@@ -8,23 +8,26 @@ const ColorPalette = () => {
   const [currentPalette, setCurrentPalette] = useState(() => generatePalette());
   const [savedPalettes, setSavedPalettes] = useState([]);
   const [notification, setNotification] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadSavedPalettes = async () => {
-      if (auth.currentUser) {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
         try {
-          const palettes = await getUserPalettes(auth.currentUser.uid);
+          const palettes = await getUserPalettes(user.uid);
           setSavedPalettes(palettes);
         } catch (error) {
+          console.error('Error loading palettes:', error);
           showNotification('Error loading palettes', 'error');
         }
+      } else {
+        setSavedPalettes([]); // Clear palettes when signed out
       }
-      setLoading(false);
-    };
+    });
 
-    loadSavedPalettes();
-  }, [auth.currentUser]);
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []); // Only run once on mount
 
   const generateNewPalette = useCallback(() => {
     setCurrentPalette(generatePalette());

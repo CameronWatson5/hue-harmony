@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, deleteDoc, query, where, limit, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, deleteDoc, query, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const savePalette = async (userId, palette) => {
@@ -6,6 +6,16 @@ export const savePalette = async (userId, palette) => {
     const userPalettesRef = collection(db, 'users', userId, 'palettes');
     const q = query(userPalettesRef);
     const querySnapshot = await getDocs(q);
+    
+    // Check if palette already exists
+    const paletteExists = querySnapshot.docs.some(doc => {
+      const data = doc.data();
+      return JSON.stringify(data.colors) === JSON.stringify(palette.colors);
+    });
+
+    if (paletteExists) {
+      throw new Error('This palette is already saved');
+    }
     
     if (querySnapshot.size >= 5) {
       throw new Error('Maximum number of palettes (5) reached');
@@ -54,6 +64,15 @@ export const saveFont = async (userId, font) => {
     const userFontsRef = collection(db, 'users', userId, 'fonts');
     const q = query(userFontsRef);
     const querySnapshot = await getDocs(q);
+    
+    // Check if font already exists
+    const fontExists = querySnapshot.docs.some(doc => 
+      doc.data().fontFamily === font
+    );
+
+    if (fontExists) {
+      throw new Error('This font is already saved');
+    }
     
     if (querySnapshot.size >= 5) {
       throw new Error('Maximum number of fonts (5) reached');

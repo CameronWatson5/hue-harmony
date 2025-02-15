@@ -11,8 +11,8 @@ const FontPicker = () => {
   const [selectedFont, setSelectedFont] = useState('');
   const [savedFonts, setSavedFonts] = useState([]);
   const [notification, setNotification] = useState(null);
-  const [loading, setLoading] = useState(true);
 
+  // Load Google Fonts
   useEffect(() => {
     const loadFonts = async () => {
       try {
@@ -27,21 +27,28 @@ const FontPicker = () => {
       }
     };
 
-    const loadSavedFonts = async () => {
-      if (auth.currentUser) {
+    loadFonts();
+  }, []);
+
+  // Handle auth state changes and load saved fonts
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
         try {
-          const fonts = await getUserFonts(auth.currentUser.uid);
+          const fonts = await getUserFonts(user.uid);
           setSavedFonts(fonts);
         } catch (error) {
+          console.error('Error loading saved fonts:', error);
           showNotification('Error loading saved fonts', 'error');
         }
+      } else {
+        setSavedFonts([]); // Clear fonts when signed out
       }
-      setLoading(false);
-    };
+    });
 
-    loadFonts();
-    loadSavedFonts();
-  }, [auth.currentUser]);
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []); // Only run once on mount
 
   const loadFontToDocument = (fontFamily) => {
     const link = document.createElement('link');
