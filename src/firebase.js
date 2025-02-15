@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 
@@ -18,9 +18,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize services
-const auth = getAuth(app);
-const db = getFirestore(app);
-const analytics = getAnalytics(app);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const analytics = getAnalytics(app);
 
 // Log the config in development to help debug
 if (process.env.NODE_ENV === 'development') {
@@ -30,4 +30,4 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-export { auth, db, analytics };
+export default app;
